@@ -1,0 +1,51 @@
+#!/bin/bash
+
+sudo apt-get update
+
+####################
+### Install kops ###
+####################
+
+curl -Lo kops https://github.com/kubernetes/kops/releases/download/$(curl -s https://api.github.com/repos/kubernetes/kops/releases/latest | grep tag_name | cut -d '"' -f 4)/kops-linux-amd64
+chmod +x kops
+sudo mv kops /usr/local/bin/kops
+
+#######################
+### Install AWS CLI ###
+#######################
+
+snap install aws-cli --classic
+
+###########################
+### Install kubectl CLI ###
+###########################
+
+sudo apt-get install -y apt-transport-https ca-certificates curl gnupg git
+curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.32/deb/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+sudo chmod 644 /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+echo 'deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.32/deb/ /' | sudo tee /etc/apt/sources.list.d/kubernetes.list
+sudo chmod 644 /etc/apt/sources.list.d/kubernetes.list
+sudo apt-get update
+sudo apt-get install -y kubectl
+
+###########################
+### Create SSH key pair ###
+###########################
+
+ssh_key="/home/ubuntu/.ssh/id_ed25519"
+ssh-keygen -t ed25519 -f $ssh_key -N ""
+sudo chown ubuntu: $ssh_key*
+
+#################################
+### Download kubernetes files ###
+#################################
+
+cd /home/ubuntu
+git clone https://github.com/kavgh/kubevpro.git
+
+#################################################
+### Configure TLS for a ingress load-balancer ###
+#################################################
+
+wget https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.12.0/deploy/static/provider/aws/nlb-with-tls-termination/deploy.yaml
+sed -i -e '/aws-load-balancer-ssl-cert/s/arn.*$/arn:aws:acm:us-east-1:905418464140:certificate\/05a942d5-064a-458f-8980-f4574c0eb92a/' deploy.yaml
